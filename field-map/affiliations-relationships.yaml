@@ -1,0 +1,66 @@
+# Affiliations & Relationships: NPSP -> Nonprofit Cloud
+#
+# See accounts-households.yaml for relationship/confidence value definitions.
+
+object_mapping:
+  npsp_side:
+    object_api_name: "npe5__Affiliation__c (Contact-to-Organization) + npsp__Relationship__c (Contact-to-Contact)"
+    summary: >
+      NPSP tracks two distinct kinds of connection: Affiliations link a Contact to an
+      organization Account (e.g. employer, board membership), and Relationships link two
+      Contacts to each other (e.g. spouse, parent/child) with reciprocal-role automation.
+  nonprofit_cloud_side:
+    object_api_name: "Native Salesforce Person Account relationship groups (per community/practitioner reporting)"
+    summary: >
+      Independent practitioner writeups (not yet cross-checked against an official Salesforce
+      object reference for this specific pairing) describe Nonprofit Cloud leaning on Person
+      Accounts plus standard/native Salesforce relationship-group mechanisms rather than
+      NPSP's two custom junction objects.
+  relationship: redesign_required
+  notes: >
+    This entry carries the lowest confidence in the whole map. Unlike the Fundraising objects
+    (GiftCommitment, GiftTransaction, etc.), Salesforce's own Nonprofit Cloud developer
+    documentation reviewed for this project did not surface a direct, object-level replacement
+    for npe5__Affiliation__c or npsp__Relationship__c. The source below discusses Person
+    Accounts, groups, and relationships in Nonprofit Cloud generally, but a field-level crosswalk
+    has not been confirmed. Treat this file as the least mature part of the map and prioritize
+    validating it against a live Nonprofit Cloud sandbox before relying on it for a migration.
+  sources:
+    - https://www.level12.io/blog/person-accounts-groups-relationships-nonprofit-cloud
+    - https://www.odnosworks.com/post/what-s-new-and-what-s-not-in-salesforce-nonprofit-cloud
+
+fields:
+  - npsp_field: "npe5__Affiliation__c.npe5__Contact__c / npe5__Organization__c"
+    npsp_label: "Contact / Organization"
+    nonprofit_cloud_field: "Not confirmed - likely a native Account-to-Account or Contact-to-Account relationship construct"
+    nonprofit_cloud_label: "n/a"
+    relationship: no_equivalent
+    confidence: unconfirmed
+    notes: >
+      No object-level confirmation found in the Salesforce developer documentation reviewed for
+      this map. Open item - please file an issue with a source (official docs preferred, a
+      screenshot of a live org's schema acceptable) if you've confirmed the replacement.
+    sources: []
+
+  - npsp_field: "npsp__Relationship__c.npsp__RelatedContact__c / npsp__Type__c / npsp__ReciprocalType__c"
+    npsp_label: "Related Contact / Relationship Type / Reciprocal Type"
+    nonprofit_cloud_field: "Not confirmed"
+    nonprofit_cloud_label: "n/a"
+    relationship: no_equivalent
+    confidence: unconfirmed
+    notes: >
+      Same status as the row above - flagged as an open research item rather than guessed at.
+      This map will not put a specific field name here without a citable source.
+    sources: []
+
+  - npsp_field: "npsp__Relationship__c (auto-reciprocal-role automation, e.g. Parent <-> Child)"
+    npsp_label: "Reciprocal relationship automation"
+    nonprofit_cloud_field: "Not confirmed"
+    nonprofit_cloud_label: "n/a"
+    relationship: no_equivalent
+    confidence: unconfirmed
+    notes: >
+      If Nonprofit Cloud has no equivalent automation, orgs relying heavily on NPSP's reciprocal
+      relationship engine (e.g. for household mail-merge or grant reporting) should treat this as
+      a required custom-build item in the migration plan, not an assumed carryover.
+    sources: []

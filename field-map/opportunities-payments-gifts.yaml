@@ -1,0 +1,156 @@
+# Opportunities & Payments -> Gift Commitments & Gift Transactions: NPSP -> Nonprofit Cloud
+#
+# See accounts-households.yaml for relationship/confidence value definitions.
+
+object_mapping:
+  npsp_side:
+    object_api_name: "Opportunity (standard) + npe01__OppPayment__c (Payment, from the NPSP-managed package)"
+    summary: >
+      NPSP tracks a donation as a standard Opportunity, with one or more child Payment records
+      (npe01__OppPayment__c) representing scheduled or received installments against that
+      Opportunity.
+  nonprofit_cloud_side:
+    object_api_name: "GiftCommitment + GiftTransaction + GiftEntry + GiftBatch (Fundraising standard objects, API v59.0+)"
+    summary: >
+      Nonprofit Cloud splits the same concept across several purpose-built objects: GiftCommitment
+      (the donor's pledge/commitment), GiftTransaction (a completed transaction against that
+      commitment), GiftEntry (pre-processing staging record with an audit trail), and GiftBatch
+      (a batch of gifts being entered together).
+  relationship: redesign_required
+  notes: >
+    This is the second major structural change. A single Opportunity+Payment pair does not map
+    to a single Nonprofit Cloud object - it maps to a small object graph. A one-time gift is
+    roughly one GiftTransaction; a pledge or recurring commitment is a GiftCommitment with one or
+    more associated GiftTransactions as installments post. There is no Salesforce-published
+    field-for-field crosswalk for this change as of this map's last review - the entries below
+    are built from the documented object/field purposes in Salesforce's own Nonprofit Cloud
+    developer guide, not from a Salesforce migration tool output.
+  sources:
+    - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+    - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_gifttransaction.htm
+    - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+    - https://www.dataimporter.io/blog/npsp-to-nonprofit-cloud-data-migration
+
+fields:
+  - npsp_field: "Opportunity.Amount"
+    npsp_label: "Amount"
+    nonprofit_cloud_field: "GiftTransaction (amount carried on the transaction, exact field TBD) / GiftCommitment.ExpectedTotalCmtAmount"
+    nonprofit_cloud_label: "Expected Total Commitment Amount (for a pledge) or transaction amount (for a completed gift)"
+    relationship: redesign_required
+    confidence: confirmed
+    notes: >
+      Which object carries the dollar amount depends on whether the Opportunity represented a
+      one-time gift (maps toward GiftTransaction) or a pledge/commitment (maps toward
+      GiftCommitment.ExpectedTotalCmtAmount, confirmed field name in Salesforce's developer docs).
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "Opportunity.CloseDate"
+    npsp_label: "Close Date"
+    nonprofit_cloud_field: "GiftCommitment.EffectiveStartDate / GiftCommitment.ExpectedEndDate"
+    nonprofit_cloud_label: "Effective Start Date / Expected End Date"
+    relationship: renamed
+    confidence: confirmed
+    notes: >
+      Field names confirmed present on GiftCommitment in Salesforce's developer documentation.
+      A single CloseDate on Opportunity has no single successor - it splits depending on whether
+      you're recording the start or the expected end of a commitment.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "Opportunity.CampaignId"
+    npsp_label: "Primary Campaign Source"
+    nonprofit_cloud_field: "GiftTransaction.CampaignId / GiftCommitment.CampaignId"
+    nonprofit_cloud_label: "Campaign"
+    relationship: direct
+    confidence: confirmed
+    notes: >
+      Both GiftTransaction and GiftCommitment carry a direct CampaignId lookup, confirmed in
+      Salesforce's developer documentation. This is one of the cleanest 1:1 field mappings in
+      the whole migration.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_gifttransaction.htm
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "Opportunity.AccountId / Opportunity.ContactId (soft credit via npsp__OpportunityContactRole__c)"
+    npsp_label: "Account / Primary Contact / Opportunity Contact Roles (soft credit)"
+    nonprofit_cloud_field: "GiftTransaction.DonorId + GiftSoftCredit"
+    nonprofit_cloud_label: "Donor + Gift Soft Credit"
+    relationship: redesign_required
+    confidence: confirmed
+    notes: >
+      GiftTransaction.DonorId is confirmed as a polymorphic reference to the Account (Person,
+      Household, or Organization) associated with the transaction. Soft credit, previously done
+      via Opportunity Contact Roles, has its own dedicated object (GiftSoftCredit) rather than a
+      generic junction object.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_gifttransaction.htm
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "npe01__OppPayment__c.npe01__Payment_Amount__c"
+    npsp_label: "Payment Amount"
+    nonprofit_cloud_field: "GiftTransaction (transaction-level amount)"
+    nonprofit_cloud_label: "Gift Transaction amount"
+    relationship: direct
+    confidence: inferred
+    notes: >
+      Each NPSP Payment installment corresponds conceptually to one completed GiftTransaction.
+      The exact currency-amount field name on GiftTransaction was not returned in the portion of
+      Salesforce's field reference reviewed for this entry - flagged inferred pending direct
+      confirmation against a live-org schema query (see scripts/validate_org.py).
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_gifttransaction.htm
+
+  - npsp_field: "npe01__OppPayment__c.npe01__Payment_Date__c"
+    npsp_label: "Payment Date"
+    nonprofit_cloud_field: "GiftTransaction (transaction date field)"
+    nonprofit_cloud_label: "Gift Transaction date"
+    relationship: direct
+    confidence: inferred
+    notes: >
+      Conceptually direct - the date a payment was actually received. Exact API field name to be
+      confirmed against a live org; GiftTransaction.AcknowledgementDate is a confirmed distinct
+      field for when the gift was acknowledged, not received, so do not conflate the two.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_gifttransaction.htm
+
+  - npsp_field: "npe01__OppPayment__c.npe01__Paid__c"
+    npsp_label: "Paid (checkbox)"
+    nonprofit_cloud_field: "GiftTransaction (existence of the record IS the paid state)"
+    nonprofit_cloud_label: "n/a"
+    relationship: redesign_required
+    confidence: inferred
+    notes: >
+      In NPSP, a Payment record exists whether paid or scheduled, with a checkbox marking status.
+      In Nonprofit Cloud's model, a GiftTransaction generally represents a completed transaction
+      (per Salesforce's own object description: "Represents a completed transaction from a
+      gift"), while scheduled-but-unpaid installments likely live on GiftCommitmentSchedule
+      instead. This is a state-modeling change, not a field rename.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "n/a - no NPSP equivalent"
+    npsp_label: "n/a"
+    nonprofit_cloud_field: "GiftAgreement"
+    nonprofit_cloud_label: "Gift Agreement"
+    relationship: new_in_npc
+    confidence: confirmed
+    notes: >
+      GiftAgreement ("the agreement to accept a gift") is a new object with no NPSP precursor.
+      Relevant for major-gift and planned-giving workflows that previously had to be modeled with
+      custom objects or attachments in NPSP.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "n/a - no NPSP equivalent"
+    npsp_label: "n/a"
+    nonprofit_cloud_field: "DonorGiftConcept"
+    nonprofit_cloud_label: "Donor Gift Concept"
+    relationship: new_in_npc
+    confidence: confirmed
+    notes: >
+      Represents "the initial idea or proposal for a gift, including the donor's intent and
+      preliminary purpose" - a pre-commitment stage NPSP never modeled natively (orgs typically
+      used Opportunity stages or a custom object for this).
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm

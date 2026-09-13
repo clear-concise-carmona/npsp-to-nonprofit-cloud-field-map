@@ -1,0 +1,101 @@
+# Recurring Donations: NPSP (RD2) -> Nonprofit Cloud
+#
+# See accounts-households.yaml for relationship/confidence value definitions.
+
+object_mapping:
+  npsp_side:
+    object_api_name: "npe03__Recurring_Donation__c (Enhanced Recurring Donations / RD2)"
+    summary: >
+      NPSP kept the legacy object API name npe03__Recurring_Donation__c even after the 2021
+      "Enhanced Recurring Donations" (RD2) rebuild - RD2 is a behavior/field change on the same
+      object, not a new object. RD2 added open-ended recurring donations, elastic/scheduled
+      installment generation, and clearer status tracking.
+  nonprofit_cloud_side:
+    object_api_name: "GiftCommitment + GiftCommitmentSchedule (Fundraising standard objects)"
+    summary: >
+      Nonprofit Cloud has no single "Recurring Donation" object. A recurring gift is a
+      GiftCommitment with a recurrence defined by GiftCommitmentSchedule, and each generated
+      installment is a GiftTransaction.
+  relationship: redesign_required
+  notes: >
+    Practitioner-reported migration guidance (GoFundMe ProSupport, publishing on behalf of
+    Salesforce.org/Salesforce Nonprofit Cloud integration docs) confirms recurring donations and
+    their installment Opportunities are handled through a dedicated import/migration path rather
+    than a direct field copy - see the official migration article linked below. Treat any
+    field-level entry in this file as a starting point for validation against that guide, not a
+    substitute for reading it directly.
+  sources:
+    - https://help.salesforce.com/s/articleView?id=sfdo.npsp_import_rd2_and_opps.htm&language=en_US&type=5
+    - https://prosupport.gofundme.com/hc/en-us/articles/37288736709659-Migrating-recurring-donations-with-the-Salesforce-Agentforce-Nonprofit-Cloud-NPC-integration
+    - https://ynexgen.com/blog/npsp-recurring-donations-vs-nonprofit-cloud
+    - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+fields:
+  - npsp_field: "npe03__Recurring_Donation__c.npe03__Amount__c"
+    npsp_label: "Amount"
+    nonprofit_cloud_field: "GiftCommitment.ExpectedTotalCmtAmount"
+    nonprofit_cloud_label: "Expected Total Commitment Amount"
+    relationship: renamed
+    confidence: confirmed
+    notes: "Field name confirmed present on GiftCommitment in Salesforce's developer documentation."
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "npe03__Recurring_Donation__c.npsp__InstallmentPeriod__c / npsp__InstallmentFrequency__c"
+    npsp_label: "Installment Period / Installment Frequency"
+    nonprofit_cloud_field: "GiftCommitment.EffectiveTransactionPeriod / GiftCommitment.EffectiveTransactionInterval"
+    nonprofit_cloud_label: "Effective Transaction Period / Effective Transaction Interval"
+    relationship: renamed
+    confidence: confirmed
+    notes: "Both target field names confirmed present on GiftCommitment in Salesforce's developer documentation."
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "npe03__Recurring_Donation__c.npsp__StartDate__c"
+    npsp_label: "Start Date"
+    nonprofit_cloud_field: "GiftCommitment.EffectiveStartDate"
+    nonprofit_cloud_label: "Effective Start Date"
+    relationship: direct
+    confidence: confirmed
+    notes: "Straightforward rename, both confirmed as date fields carrying the same meaning."
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "npe03__Recurring_Donation__c.npsp__Status__c (RD2 statuses: Active, Lapsed, Closed)"
+    npsp_label: "Status"
+    nonprofit_cloud_field: "GiftCommitment (status model not confirmed against docs reviewed)"
+    nonprofit_cloud_label: "n/a"
+    relationship: redesign_required
+    confidence: unconfirmed
+    notes: >
+      RD2's Active/Lapsed/Closed status model is central to NPSP recurring-donation reporting.
+      The equivalent status mechanism on GiftCommitment was not confirmed in the pages reviewed
+      for this map - run scripts/validate_org.py against a live Nonprofit Cloud org, or file an
+      issue with a source, before relying on this row.
+    sources: []
+
+  - npsp_field: "npe03__Recurring_Donation__c.npsp__RecurringType__c (Open / Fixed)"
+    npsp_label: "Recurring Type"
+    nonprofit_cloud_field: "GiftCommitment.FormalCommitmentType / GiftCommitment.IsAssetTransferExpected"
+    nonprofit_cloud_label: "Formal Commitment Type"
+    relationship: renamed
+    confidence: inferred
+    notes: >
+      GiftCommitment.FormalCommitmentType is a confirmed field name, but its picklist values and
+      whether they map cleanly to NPSP's Open/Fixed distinction has not been verified against a
+      live org.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_api_objects_giftcommitment.htm
+
+  - npsp_field: "npe03__Recurring_Donation__c (child Opportunity installments, auto-generated by RD2)"
+    npsp_label: "Installment Opportunities"
+    nonprofit_cloud_field: "GiftTransaction (one per generated installment) via GiftCommitmentSchedule"
+    nonprofit_cloud_label: "Gift Transaction"
+    relationship: redesign_required
+    confidence: confirmed
+    notes: >
+      Confirmed by Salesforce's own migration help article: importing RD2 recurring donations and
+      their installment Opportunities into Nonprofit Cloud is a distinct, documented migration
+      step, not an automatic field copy.
+    sources:
+      - https://help.salesforce.com/s/articleView?id=sfdo.npsp_import_rd2_and_opps.htm&language=en_US&type=5

@@ -1,0 +1,108 @@
+# Accounts & Households: NPSP -> Nonprofit Cloud (Agentforce for Nonprofit)
+#
+# relationship values:
+#   direct            same field/object exists on both sides with the same meaning
+#   renamed           same concept, different API/label name
+#   redesign_required data model changed shape; a 1:1 field copy will not work
+#   no_equivalent     nothing comparable exists on the target side
+#   new_in_npc        exists in Nonprofit Cloud with no NPSP precursor
+#
+# confidence values:
+#   confirmed    verified against Salesforce official developer/help documentation
+#   inferred     derived from documented behavior but not explicitly stated by Salesforce
+#   unconfirmed  reported by practitioners (blogs, community threads) but not yet verified against docs or a live org
+
+object_mapping:
+  npsp_side:
+    object_api_name: "Account (Household Account model) / npsp__Household__c (legacy Household object, pre-2016)"
+    summary: >
+      NPSP's default data model since 2016 uses a "Household Account" - a standard Account
+      record (record type: Household Account) that groups one or more Contacts. The legacy
+      npsp__Household__c custom object still exists for orgs that never migrated off the
+      pre-2016 Household object model.
+  nonprofit_cloud_side:
+    object_api_name: "Account (Person Account record type) or standard Account for organizations"
+    summary: >
+      Nonprofit Cloud's Fundraising data model is built around standard Salesforce Person
+      Accounts for individual constituents rather than a Household-grouping Account. There is
+      no direct "Household Account" concept carried over.
+  relationship: redesign_required
+  notes: >
+    This is the single largest structural change in the entire migration. NPSP's Household
+    Account groups multiple Contacts under one Account record for combined giving history and
+    mail-merge/soft-credit rollups. Nonprofit Cloud instead gives each individual constituent
+    their own Person Account. There is no automated, lossless field-level mapping for this
+    object - it requires a data model redesign, not a migration script. Multi-member household
+    grouping, if still needed, must be rebuilt using a different mechanism (e.g., a custom
+    household/grouping object, or Salesforce's relationship groups) rather than inherited
+    directly from NPSP.
+  sources:
+    - https://www.charityplatform.com/blog/salesforce-nonprofit-cloud-migration-from-npsp
+    - https://magicfuse.co/blog/salesforce-nonprofit-cloud-vs-npsp
+    - https://www.level12.io/blog/person-accounts-groups-relationships-nonprofit-cloud
+
+fields:
+  - npsp_field: "Account.npe01__SYSTEM_AccountType__c"
+    npsp_label: "System Account Type"
+    nonprofit_cloud_field: "Account.RecordTypeId (Person Account record type)"
+    nonprofit_cloud_label: "Record Type"
+    relationship: redesign_required
+    confidence: inferred
+    notes: >
+      NPSP flags an Account as a household/individual via this system field plus record type.
+      Nonprofit Cloud uses Salesforce's native Person Account record type mechanism instead -
+      there's no field-for-field copy, the record type itself has to change.
+    sources:
+      - https://www.level12.io/blog/person-accounts-groups-relationships-nonprofit-cloud
+
+  - npsp_field: "Account.Name (Household Account naming, e.g. 'Smith Household')"
+    npsp_label: "Household Name"
+    nonprofit_cloud_field: "Account.Name (Person Account, auto-derived from FirstName/LastName)"
+    nonprofit_cloud_label: "Account Name"
+    relationship: redesign_required
+    confidence: inferred
+    notes: >
+      Household naming conventions (e.g. NPSP's auto-generated "<LastName> Household") have no
+      meaning once each person is their own Person Account. Any custom household-naming logic
+      does not carry over and needs a replacement if multi-member grouping is still required.
+    sources:
+      - https://www.charityplatform.com/blog/salesforce-nonprofit-cloud-migration-from-npsp
+
+  - npsp_field: "Account.npo02__Formal_Greeting__c / npo02__Informal_Greeting__c"
+    npsp_label: "Formal / Informal Greeting"
+    nonprofit_cloud_field: "No direct equivalent found on Person Account"
+    nonprofit_cloud_label: "n/a"
+    relationship: no_equivalent
+    confidence: unconfirmed
+    notes: >
+      These greeting fields are commonly used for mail-merge on the Household Account. No
+      Nonprofit Cloud Fundraising object was found in Salesforce's developer documentation that
+      replicates this concept as of the objects reviewed for this map. Flagging as open - please
+      file an issue with a source if you've confirmed a replacement field or object.
+    sources: []
+
+  - npsp_field: "Account.npo02__TotalOppAmount__c / npo02__NumberOfClosedOpps__c (household rollups)"
+    npsp_label: "Total Gifts / Number of Gifts (household rollup)"
+    nonprofit_cloud_field: "DonorGiftSummary"
+    nonprofit_cloud_label: "Donor Gift Summary"
+    relationship: redesign_required
+    confidence: confirmed
+    notes: >
+      Nonprofit Cloud has a dedicated DonorGiftSummary object (API v59.0+) that represents gift
+      summaries for accounts and contacts, replacing NPSP's household-level rollup fields on
+      Account. The rollup no longer lives directly on Account - it's a related summary record.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "Contact.npe01__Household__c (legacy Household lookup, pre-2016 model only)"
+    npsp_label: "Household (legacy lookup)"
+    nonprofit_cloud_field: "n/a - superseded by Person Account model entirely"
+    nonprofit_cloud_label: "n/a"
+    relationship: no_equivalent
+    confidence: confirmed
+    notes: >
+      Orgs still on the legacy pre-2016 npsp__Household__c object model have an extra migration
+      step: move to the modern Household Account model first, then plan the Nonprofit Cloud
+      migration. Do not attempt to map the legacy object directly to Nonprofit Cloud.
+    sources:
+      - https://magicfuse.co/blog/salesforce-nonprofit-cloud-vs-npsp

@@ -1,0 +1,33 @@
+name: Validate generated docs are in sync
+
+# Fails a PR if someone edited field-map/*.yaml without regenerating docs/*.md,
+# or hand-edited docs/*.md without touching the YAML source.
+
+on:
+  pull_request:
+    paths:
+      - "field-map/**"
+      - "docs/**"
+      - "scripts/**"
+
+jobs:
+  check-docs-in-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Regenerate docs and diff against committed version
+        run: |
+          python scripts/generate_tables.py
+          if ! git diff --quiet -- docs/; then
+            echo "::error::docs/ is out of sync with field-map/. Run 'python scripts/generate_tables.py' and commit the result."
+            git diff -- docs/
+            exit 1
+          fi

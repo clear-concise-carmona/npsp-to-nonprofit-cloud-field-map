@@ -1,0 +1,78 @@
+# Allocations & General Accounting Units: NPSP -> Nonprofit Cloud
+#
+# See accounts-households.yaml for relationship/confidence value definitions.
+
+object_mapping:
+  npsp_side:
+    object_api_name: "npsp__Allocation__c + npsp__General_Accounting_Unit__c"
+    summary: >
+      NPSP splits a gift's designation across one or more General Accounting Units (GAUs, e.g.
+      funds or programs) via child Allocation records against the Opportunity.
+  nonprofit_cloud_side:
+    object_api_name: "GiftDesignation + GiftTransactionDesignation + GiftDefaultDesignation"
+    summary: >
+      Nonprofit Cloud represents this with GiftDesignation ("a designation that can be assigned
+      to a gift transaction") and a GiftTransactionDesignation junction, plus
+      GiftDefaultDesignation for defaulting designations on gifts generated from an Opportunity,
+      Campaign, or commitment.
+  relationship: renamed
+  notes: >
+    Conceptually the closest thing to a direct rename in this whole migration - "GAU + Allocation"
+    becomes "GiftDesignation + GiftTransactionDesignation." Object purposes are confirmed from
+    Salesforce's own developer documentation; exact field-level names within GiftDesignation were
+    not enumerated in the pages reviewed for this map and should be confirmed with
+    scripts/validate_org.py before building migration scripts against them.
+  sources:
+    - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+    - https://plative.com/insights/blog/creating-gau-allocations-in-salesforce-nonprofit-cloud/
+    - https://www.dataimporter.io/blog/npsp-to-nonprofit-cloud-data-migration
+
+fields:
+  - npsp_field: "npsp__General_Accounting_Unit__c.Name"
+    npsp_label: "GAU Name"
+    nonprofit_cloud_field: "GiftDesignation (name/label field, exact API name unconfirmed)"
+    nonprofit_cloud_label: "Gift Designation"
+    relationship: renamed
+    confidence: inferred
+    notes: "Object-level rename confirmed; field-level name not yet verified against a live org."
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "npsp__Allocation__c.npsp__Amount__c / npsp__Percent__c"
+    npsp_label: "Allocation Amount / Percent"
+    nonprofit_cloud_field: "GiftTransactionDesignation (amount/percent split field, exact API name unconfirmed)"
+    nonprofit_cloud_label: "Gift Transaction Designation"
+    relationship: renamed
+    confidence: inferred
+    notes: >
+      GiftTransactionDesignation is confirmed as the junction between a gift transaction and a
+      designation in Salesforce's Fundraising standard objects list, matching the role NPSP's
+      Allocation record plays today. Field-level names unconfirmed.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "npsp__Allocation__c.npsp__Opportunity__c (default GAU behavior for un-allocated gifts)"
+    npsp_label: "Default Allocation"
+    nonprofit_cloud_field: "GiftDefaultDesignation"
+    nonprofit_cloud_label: "Gift Default Designation"
+    relationship: direct
+    confidence: confirmed
+    notes: >
+      Confirmed as its own object: "represents the default designation for gifts that originate
+      from an opportunity, campaign, or commitment" - a direct conceptual match for NPSP's
+      default-GAU behavior.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
+
+  - npsp_field: "n/a - NPSP has no soft-credit-specific default allocation object"
+    npsp_label: "n/a"
+    nonprofit_cloud_field: "GiftDefaultSoftCredit"
+    nonprofit_cloud_label: "Gift Default Soft Credit"
+    relationship: new_in_npc
+    confidence: confirmed
+    notes: >
+      "Represents the default allocation for soft credits on gift commitment transactions that
+      are created by a recurrence engine and credited to constituents who influenced the
+      commitment" - new behavior with no direct NPSP precursor, added API v62.0+.
+    sources:
+      - https://developer.salesforce.com/docs/atlas.en-us.nonprofit_cloud.meta/nonprofit_cloud/npc_fundraising_standard_objects.htm
