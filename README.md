@@ -108,9 +108,11 @@ think this is right" is not a source.
 
 Maintained by [Jeremy Carmona](https://www.clearconciseconsulting.com/about), a 13x certified
 Salesforce Architect and founder of [Clear Concise Consulting](https://www.clearconciseconsulting.com),
-a Salesforce consultancy for nonprofit, healthcare, and enterprise organizations. If you're planning
-an NPSP-to-Nonprofit-Cloud migration and want a second set of eyes on scope before you start,
-[get in touch](https://www.clearconciseconsulting.com/contact).
+a Salesforce consultancy for nonprofit, healthcare, and enterprise organizations. This map comes out
+of CCC's [Salesforce nonprofit consulting](https://www.clearconciseconsulting.com/services/salesforce-nonprofit-consulting)
+practice - NPSP and Nonprofit Cloud implementation, migration, and data quality work for nonprofits.
+If you're planning an NPSP-to-Nonprofit-Cloud migration and want a second set of eyes on scope
+before you start, [get in touch](https://www.clearconciseconsulting.com/contact).
 
 ## License
 
