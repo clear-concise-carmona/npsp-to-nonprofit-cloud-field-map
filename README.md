@@ -1,21 +1,24 @@
 # npsp-to-nonprofit-cloud-field-map
 
-A versioned, source-cited reference mapping Nonprofit Success Pack (NPSP) objects and fields to
-their Salesforce Nonprofit Cloud (Agentforce for Nonprofit) equivalents - and flagging where no
-equivalent exists yet.
+A source-cited **NPSP field mapping** for anyone planning an **NPSP to Nonprofit Cloud migration**:
+every Nonprofit Success Pack (NPSP) object and field lined up against its equivalent in the new
+**Agentforce nonprofit data model**, with the gaps flagged instead of papered over.
 
 ## Why this exists
 
-NPSP has been in feature freeze since March 2023 with no announced retirement date, and new
-nonprofit orgs are now routed to Nonprofit Cloud by default ([Salesforce Ben](https://www.salesforceben.com/the-state-of-salesforce-nonprofit-offerings-in-2026/); [ynexgen](https://ynexgen.com/blog/is-npsp-going-away)). That leaves a large number of orgs planning a migration with no
+NPSP has been frozen since 2023 - no new features shipped since March of that year, no announced
+retirement date - and new nonprofit orgs are now routed to Nonprofit Cloud by default
+([Salesforce Ben](https://www.salesforceben.com/the-state-of-salesforce-nonprofit-offerings-in-2026/); [ynexgen](https://ynexgen.com/blog/is-npsp-going-away)). Every org still running NPSP is on a clock, whether or not anyone's told
+them so. That leaves a large number of orgs planning a migration with no
 Salesforce-published field-level crosswalk between the two data models. Blog posts describe the
-high-level shape of the change - Person Accounts replace Household Accounts, Gift Commitments and
-Gift Transactions replace Opportunity + Payment ([charityplatform](https://www.charityplatform.com/blog/salesforce-nonprofit-cloud-migration-from-npsp)) - but nobody has published the field-by-field detail, and NPSP and Nonprofit Cloud can't run in
+high-level shape of the change - Person Accounts replace Household Accounts, and the **Nonprofit
+Cloud Gift Commitment** object (GiftCommitment) plus GiftTransaction replace Opportunity + Payment
+([charityplatform](https://www.charityplatform.com/blog/salesforce-nonprofit-cloud-migration-from-npsp)) - but nobody has published the field-by-field detail, and NPSP and Nonprofit Cloud can't run in
 the same org side by side while you figure it out ([MagicFuse](https://magicfuse.co/blog/salesforce-nonprofit-cloud-vs-npsp)).
 
-This repo is that detail, built from Salesforce's own developer documentation wherever possible,
-with every entry tagged by how confident we actually are in it. Where the docs didn't say, we say
-so instead of guessing.
+This repo is that detail: a field-by-field NPSP field mapping built from Salesforce's own developer
+documentation wherever possible, with every entry tagged by how confident we actually are in it.
+Where the docs didn't say, we say so instead of guessing.
 
 **This is not a Salesforce product and is not officially endorsed by Salesforce.** It's an
 independent reference maintained by [Clear Concise Consulting](https://www.clearconciseconsulting.com),
@@ -90,10 +93,11 @@ request - see [CONTRIBUTING.md](CONTRIBUTING.md).
 If you're at the "should we migrate, and how bad will it be" stage rather than the "here's our
 field map" stage, see Salesforce's own migration implementation guide
 ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=sfdo.NPC_Implementation_Migration_Guides.htm&language=en_US))
-and consider running [`npsp-migration-readiness-scanner`](https://github.com/clear-concise-carmona/npsp-migration-readiness-scanner)
-against your org first - it scores how much of this map's "redesign required" territory your
-specific org actually touches, rather than treating the whole migration as one undifferentiated
-project.
+and consider running the [npsp-migration-readiness-scanner](https://github.com/clear-concise-carmona/npsp-migration-readiness-scanner) -
+a companion tool that scores your NPSP to Nonprofit Cloud assessment 0-100 and flags nonprofit cloud
+migration risk - against your org first. It shows how much of this map's "redesign required"
+territory your specific org actually touches, rather than treating the whole migration as one
+undifferentiated project.
 
 ## Contributing
 
